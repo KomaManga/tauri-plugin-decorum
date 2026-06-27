@@ -5,6 +5,11 @@ on:
     tags:
       - "v*"
   workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to release (e.g. v2.0.0)"
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -31,6 +36,7 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v3
         with:
+          tag_name: ${{ inputs.tag || github.ref_name }}
           generate_release_notes: true
           draft: false
-          prerelease: ${{ contains(github.ref_name, '-') }}
+          prerelease: ${{ contains(inputs.tag || github.ref_name, '-') }}
