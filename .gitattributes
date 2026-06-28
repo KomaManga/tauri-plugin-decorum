@@ -1,0 +1,22 @@
+# Normalize all text files to LF line endings in the repository and the
+# working tree, regardless of each contributor's core.autocrlf setting.
+* text=auto eol=lf
+
+# Binary files — never normalize or diff.
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.ico  binary
+*.icns binary
+*.webp binary
+*.woff  binary
+*.woff2 binary
+*.ttf  binary
+*.otf  binary
+*.zip  binary
+*.gz   binary
+*.exe  binary
+*.dll  binary
+*.so   binary
+*.dylib binary
