@@ -108,7 +108,7 @@ div[data-tauri-decoration-tb] {}
 
 ### 6. Interactive content in the titlebar area
 
-The plugin creates a fixed-position overlay (`div[data-tauri-decoration-tb]`) at `z-index: 100` covering the top 32px of the window. This overlay handles window dragging and hosts the window control buttons. Any app content in that area will be behind the overlay and won't receive clicks.
+The plugin creates a fixed-position drag overlay (`div[data-tauri-decoration-tb]`) at `z-index: 100` covering the top 32px of the window. Window control buttons are rendered in a separate fixed layer (`div[data-tauri-decoration-controls]`) at `z-index: 300` so app titlebar content can sit above the drag region without hiding the buttons.
 
 If you need interactive elements in the titlebar area (dropdown menus, navigation tabs, etc.), position your content above the overlay and use `pointer-events` to let clicks fall through to the drag region in empty areas:
 
@@ -118,7 +118,7 @@ If you need interactive elements in the titlebar area (dropdown menus, navigatio
   top: 0;
   left: 0;
   right: 0;
-  z-index: 200;          /* above the decoration overlay (z-index: 100) */
+  z-index: 200;          /* above drag layer, below window controls */
   height: 32px;
   pointer-events: none;  /* let clicks fall through to the drag region */
 }

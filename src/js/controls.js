@@ -47,12 +47,42 @@ function waitForElm(selector) {
 		// Dark/light mode aware hover colors (fixes #39)
 		const BUTTON_HOVER_BG_LIGHT = "rgba(0,0,0,0.1)";
 		const BUTTON_HOVER_BG_DARK = "rgba(255,255,255,0.1)";
+		const BUTTON_FG_LIGHT = "#202020";
+		const BUTTON_FG_DARK = "#f5f5f5";
 		const CLOSE_HOVER_BG = "rgba(255,0,0,0.7)";
+		const CLOSE_HOVER_FG = "#ffffff";
 
 		const getButtonHoverBg = () =>
 			window.matchMedia("(prefers-color-scheme: dark)").matches
 				? BUTTON_HOVER_BG_DARK
 				: BUTTON_HOVER_BG_LIGHT;
+
+		const getButtonFg = () =>
+			window.matchMedia("(prefers-color-scheme: dark)").matches
+				? BUTTON_FG_DARK
+				: BUTTON_FG_LIGHT;
+
+		const ensureControlHost = () => {
+			let controlsEl = document.querySelector("[data-tauri-decoration-controls]");
+			if (controlsEl) return controlsEl;
+
+			controlsEl = document.createElement("div");
+			controlsEl.setAttribute("data-tauri-decoration-controls", "");
+			controlsEl.setAttribute("role", "group");
+			controlsEl.setAttribute("lang", "en");
+			controlsEl.setAttribute("aria-label", "Window controls");
+			controlsEl.style.top = "0";
+			controlsEl.style.right = "0";
+			controlsEl.style.zIndex = "300";
+			controlsEl.style.height = "32px";
+			controlsEl.style.display = "flex";
+			controlsEl.style.position = "fixed";
+			controlsEl.style.alignItems = "center";
+			controlsEl.style.justifyContent = "end";
+			controlsEl.style.backgroundColor = "transparent";
+			document.body.appendChild(controlsEl);
+			return controlsEl;
+		};
 
 		// Track active control for hover rendering
 		let activeControl = null;
@@ -60,13 +90,15 @@ function waitForElm(selector) {
 
 		const renderHover = () => {
 			const hoverBg = getButtonHoverBg();
+			const fg = getButtonFg();
 			buttons.forEach(({ button, isClose }, control) => {
-				button.style.backgroundColor =
-					control === activeControl
-						? isClose
-							? CLOSE_HOVER_BG
-							: hoverBg
-						: "transparent";
+				const active = control === activeControl;
+				button.style.backgroundColor = active
+					? isClose
+						? CLOSE_HOVER_BG
+						: hoverBg
+					: "transparent";
+				button.style.color = active && isClose ? CLOSE_HOVER_FG : fg;
 			});
 		};
 
@@ -114,6 +146,7 @@ function waitForElm(selector) {
 			btn.style.backgroundColor = "transparent";
 			btn.style.textRendering = "optimizeLegibility";
 			btn.style.fontFamily = "'Segoe Fluent Icons', 'Segoe MDL2 Assets'";
+			btn.style.color = getButtonFg();
 
 			const isClose = id === "close";
 
@@ -204,9 +237,10 @@ function waitForElm(selector) {
 		const debouncedCreateControls = debounce(() => {
 			const tbEl = document.querySelector("[data-tauri-decoration-tb]");
 			if (!tbEl) return;
+			const controlsEl = ensureControlHost();
 
 			// Check if controls already exist
-			if (tbEl.querySelector("[id^='decoration-tb-']")) {
+			if (controlsEl.querySelector("[id^='decoration-tb-']")) {
 				console.log("DECORATION: Controls already exist. Skipping creation.");
 				return;
 			}
@@ -215,8 +249,9 @@ function waitForElm(selector) {
 			// to only include the controls that are enabled on the window
 			["minimize", "maximize", "close"].forEach((id) => {
 				const btn = createButton(id);
-				tbEl.appendChild(btn);
+				controlsEl.appendChild(btn);
 			});
+			renderHover();
 		});
 
 		// Use MutationObserver to watch for changes

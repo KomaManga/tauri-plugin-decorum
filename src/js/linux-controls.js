@@ -45,7 +45,35 @@ function waitForElm(selector) {
 
   console.log("DECORATION: Waiting for [data-tauri-decoration-tb] ...");
 
+  const ensureControlHost = () => {
+    let controlsEl = document.querySelector("[data-tauri-decoration-controls]");
+    if (controlsEl) return controlsEl;
+
+    controlsEl = document.createElement("div");
+    controlsEl.setAttribute("data-tauri-decoration-controls", "");
+    controlsEl.setAttribute("role", "group");
+    controlsEl.setAttribute("lang", "en");
+    controlsEl.setAttribute("aria-label", "Window controls");
+    controlsEl.style.top = "0";
+    controlsEl.style.right = "0";
+    controlsEl.style.zIndex = "300";
+    controlsEl.style.height = "32px";
+    controlsEl.style.display = "flex";
+    controlsEl.style.position = "fixed";
+    controlsEl.style.alignItems = "center";
+    controlsEl.style.justifyContent = "end";
+    controlsEl.style.backgroundColor = "transparent";
+    document.body.appendChild(controlsEl);
+    return controlsEl;
+  };
+
   waitForElm("[data-tauri-decoration-tb]").then((tbEl) => {
+    const controlsEl = ensureControlHost();
+    if (controlsEl.querySelector("[id^='decoration-tb-']")) {
+      console.log("DECORATION: Controls already exist. Skipping creation.");
+      return;
+    }
+
     const actions = document.createElement("div");
     actions.className = "decoration-tb-actions";
     actions.style.width = "fit-content";
@@ -100,7 +128,7 @@ function waitForElm(selector) {
     // to only include the controls that are enabled on the window
     ["minimize", "maximize", "close"].forEach(createButton);
 
-    tbEl.appendChild(actions);
+    controlsEl.appendChild(actions);
 
     const style = document.createElement("style");
     document.head.appendChild(style);
