@@ -14,8 +14,14 @@ pub struct UnsafeWindowHandle(pub *mut std::ffi::c_void);
 unsafe impl Send for UnsafeWindowHandle {}
 unsafe impl Sync for UnsafeWindowHandle {}
 
+/// Reposition the macOS traffic-light buttons to the given inset.
+///
+/// Returns the right-edge x coordinate of the last positioned button
+/// (in window-content space), or `0.0` if the buttons could not be found.
+/// Callers can use this to expose a CSS custom property so the webview
+/// content can offset itself to avoid overlapping the traffic lights.
 #[cfg(target_os = "macos")]
-pub fn position_traffic_lights(ns_window_handle: UnsafeWindowHandle, x: f64, y: f64) {
+pub fn position_traffic_lights(ns_window_handle: UnsafeWindowHandle, x: f64, y: f64) -> f64 {
     use cocoa::appkit::{NSView, NSWindow, NSWindowButton};
     use cocoa::foundation::NSRect;
     let ns_window = ns_window_handle.0 as cocoa::base::id;
@@ -27,21 +33,22 @@ pub fn position_traffic_lights(ns_window_handle: UnsafeWindowHandle, x: f64, y: 
 
         // Check if close button exists and has a valid superview
         if close.is_null() {
-            return;
+            return 0.0;
         }
-        
+
         let close_superview = close.superview();
         if close_superview.is_null() {
-            return;
+            return 0.0;
         }
-        
+
         let title_bar_container_view = close_superview.superview();
         if title_bar_container_view.is_null() {
-            return;
+            return 0.0;
         }
 
         let close_rect: NSRect = msg_send![close, frame];
         let button_height = close_rect.size.height;
+        let button_width = close_rect.size.width;
 
         let title_bar_frame_height = button_height + y;
         let mut title_bar_rect = NSView::frame(title_bar_container_view);
@@ -60,21 +67,26 @@ pub fn position_traffic_lights(ns_window_handle: UnsafeWindowHandle, x: f64, y: 
         if !zoom.is_null() {
             window_buttons.push(zoom);
         }
-        
-        if window_buttons.is_empty() {
-            return;
-        }
-        
-        let space_between = 20.0; // Fixed space between buttons
-        let vertical_offset = 4.0; // Adjust this value to push buttons down
 
+        if window_buttons.is_empty() {
+            return 0.0;
+        }
+
+        let space_between = 20.0; // Fixed space between buttons
+
+        let last_index = window_buttons.len() - 1;
         for (i, button) in window_buttons.into_iter().enumerate() {
             let mut rect: NSRect = NSView::frame(button);
             rect.origin.x = x + (i as f64 * space_between);
-            // Adjust vertical positioning
-            rect.origin.y = ((title_bar_frame_height - button_height) / 2.0) - vertical_offset;
+            // Vertically center the button within the titlebar container.
+            // The container uses standard (non-flipped) AppKit coordinates,
+            // so origin.y is measured from the container's bottom edge.
+            rect.origin.y = (title_bar_frame_height - button_height) / 2.0;
             button.setFrameOrigin(rect.origin);
         }
+
+        // Right edge of the last button = its origin x + its width.
+        x + (last_index as f64 * space_between) + button_width
     }
 }
 

@@ -55,7 +55,7 @@ fn main() {
 
 ### 3. Configure window
 
-In `tauri.conf.json`, set `withGlobalTauri: true` and use frameless window options:
+In `tauri.conf.json`, set `withGlobalTauri: true` and use a transparent/overlay titlebar. **Do not set `decorations: false`** — the plugin manages decorations per-platform in `create_overlay_titlebar` (macOS needs `decorations: true` so the native traffic-light buttons exist; Windows/Linux are set to `false` automatically).
 
 ```json
 {
@@ -64,13 +64,15 @@ In `tauri.conf.json`, set `withGlobalTauri: true` and use frameless window optio
     "windows": [
       {
         "titleBarStyle": "Overlay",
-        "hiddenTitle": true,
-        "decorations": false
+        "hiddenTitle": true
       }
     ]
   }
 }
 ```
+
+> [!NOTE]
+> On macOS, `titleBarStyle: "Overlay"` + `hiddenTitle: true` gives the frameless look while keeping the native traffic-light buttons. Setting `decorations: false` on macOS removes the traffic lights entirely — the plugin's `set_traffic_lights_inset` would have nothing to reposition.
 
 ### 4. Set permissions
 
@@ -120,6 +122,20 @@ If you need interactive elements in the titlebar area (dropdown menus, navigatio
   pointer-events: auto;  /* re-enable clicks on menus, buttons, etc. */
 }
 ```
+
+### 7. Avoiding overlap with macOS traffic lights (macOS only)
+
+The macOS traffic-light buttons are native OS controls rendered on top of the webview — the plugin cannot move arbitrary app content out of their way automatically (it has no knowledge of your DOM layout). Instead, `set_traffic_lights_inset` exposes the cluster's right edge to the webview as a CSS custom property so your titlebar content can offset itself with a single line of CSS:
+
+```css
+.titlebar-content {
+  /* Pushed past the traffic lights on macOS; falls back to 8px
+     on Windows/Linux where the window controls are on the right. */
+  padding-left: var(--decoration-traffic-light-left, 8px);
+}
+```
+
+The variable is set on `:root` after `set_traffic_lights_inset(x, y)` runs, and equals `x + (button_count - 1) * 20 + button_width + 8` (a small breathing gap is included). If you never call `set_traffic_lights_inset`, the variable is unset and the fallback applies.
 
 ## Example App
 

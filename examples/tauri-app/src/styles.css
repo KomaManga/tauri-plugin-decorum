@@ -34,7 +34,12 @@ body {
 
 /* Titlebar content — fixed above the decoration overlay (z-index 100).
    pointer-events: none lets clicks fall through to the decoration drag
-   region below. Individual dropdown menus re-enable pointer-events. */
+   region below. Individual dropdown menus re-enable pointer-events.
+   On macOS the plugin exposes --decoration-traffic-light-left (the
+   right edge of the traffic-light cluster + a small gap) so the menu
+   bar is automatically pushed past the native close/minimize/zoom
+   buttons. The fallback (8px) applies on Windows/Linux where the
+   window controls live on the right side of the titlebar. */
 .titlebar-content {
 	position: fixed;
 	top: 0;
@@ -44,11 +49,16 @@ body {
 	height: 32px;
 	display: flex;
 	align-items: center;
-	padding-left: 8px;
+	padding-left: var(--decoration-traffic-light-left, 8px);
 	gap: 4px;
 	user-select: none;
 	-webkit-user-select: none;
 	pointer-events: none;
+	/* Subtle separator between the titlebar strip and the app body.
+	   Solid background matching the root so it contrasts with the
+	   lighter app-body and the border-bottom reads as a separator. */
+	border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+	background-color: #f6f6f6;
 }
 
 .menu-bar {
@@ -110,7 +120,8 @@ body {
 	background: rgba(0, 0, 0, 0.06);
 }
 
-/* App body */
+/* App body — distinct background from the titlebar strip so the
+   titlebar's bottom border reads as a clear visual separator. */
 .app-body {
 	flex: 1;
 	display: flex;
@@ -119,6 +130,7 @@ body {
 	justify-content: center;
 	text-align: center;
 	padding: 2rem;
+	background-color: #ffffff;
 }
 
 .app-body h1 {
@@ -139,6 +151,15 @@ body {
 	:root {
 		color: #f6f6f6;
 		background-color: #1a1a1a;
+	}
+
+	.titlebar-content {
+		border-bottom-color: rgba(255, 255, 255, 0.1);
+		background-color: #1a1a1a;
+	}
+
+	.app-body {
+		background-color: #242424;
 	}
 
 	.dropdown-menu:hover {

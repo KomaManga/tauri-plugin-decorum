@@ -30,7 +30,15 @@ impl<'a> WebviewWindowExt for WebviewWindow {
     /// This will remove the default titlebar and create a draggable area for the titlebar.
     /// On Windows, it will also create custom window controls.
     fn create_overlay_titlebar(&self) -> Result<&WebviewWindow, Error> {
-        #[cfg(target_os = "windows")]
+        // Manage native decorations per-platform:
+        // - macOS: decorations MUST stay enabled so the native traffic-light
+        //   buttons exist for set_traffic_lights_inset to reposition. The
+        //   frameless look comes from titleBarStyle: "Overlay" + hiddenTitle.
+        // - Windows/Linux: decorations off so the custom HTML controls
+        //   injected below are the only window controls.
+        #[cfg(target_os = "macos")]
+        self.set_decorations(true)?;
+        #[cfg(any(target_os = "windows", target_os = "linux"))]
         self.set_decorations(false)?;
 
         let win2 = self.clone();
@@ -195,9 +203,30 @@ impl<'a> WebviewWindowExt for WebviewWindow {
 
             // Store the custom position in the window state
             traffic::update_traffic_light_positions(win, x.into(), y.into());
-            
-            // Apply the position immediately
-            traffic::position_traffic_lights(ns_window_handle, x.into(), y.into());
+
+            // Apply the position immediately. position_traffic_lights returns
+            // the right-edge x of the last traffic-light button so we can
+            // expose it to the webview as a CSS custom property. Apps can then
+            // offset their own titlebar content (e.g. menu bars) with a single
+            // line of CSS: `padding-left: var(--decoration-traffic-light-left, 0px)`.
+            let cluster_right_edge =
+                traffic::position_traffic_lights(ns_window_handle, x.into(), y.into());
+
+            if cluster_right_edge > 0.0 {
+                // Add a small breathing gap after the last button.
+                let left_clearance = cluster_right_edge + 8.0;
+                let script = format!(
+                    "document.documentElement.style.setProperty(\
+                     '--decoration-traffic-light-left','{0}px')",
+                    left_clearance
+                );
+                if let Err(e) = win.eval(&script) {
+                    eprintln!(
+                        "decoration: failed to expose traffic-light CSS var: {:?}",
+                        e
+                    );
+                }
+            }
 
             Ok(win)
         })
